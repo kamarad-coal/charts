@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "minecraft-spigot.fullname" . }}
+  labels:
+    {{- include "minecraft-spigot.labels" . | nindent 4 }}
+    coal.kamarad.app/server-id: "{{ .Values.kamarad.serverId }}"
+    coal.kamarad.app/game: "minecraft"
+    coal.kamarad.app/minecraft-distro: "spigot"
+data:
+  eula.txt: "eula=true"
+  server.properties: |
+{{- tpl .Values.spigot.config . | nindent 4 }}

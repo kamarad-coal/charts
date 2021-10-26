@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "minecraft-bungee.fullname" . }}
+  labels:
+    {{- include "minecraft-bungee.labels" . | nindent 4 }}
+    coal.kamarad.app/server-id: "{{ .Values.kamarad.serverId }}"
+    coal.kamarad.app/game: "minecraft"
+    coal.kamarad.app/minecraft-distro: "bungee"
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 25577
+      protocol: TCP
+      name: bungee
+  selector:
+    {{- include "minecraft-bungee.selectorLabels" . | nindent 4 }}

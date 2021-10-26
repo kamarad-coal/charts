@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "minecraft-bungee.fullname" . }}
+  labels:
+    {{- include "minecraft-bungee.labels" . | nindent 4 }}
+    coal.kamarad.app/server-id: "{{ .Values.kamarad.serverId }}"
+    coal.kamarad.app/game: "minecraft"
+    coal.kamarad.app/minecraft-distro: "bungee"
+    coal.kamarad.app/allocated-port: "{{ .Values.service.port }}"
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  {{- with .Values.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "minecraft-bungee.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "minecraft-bungee.selectorLabels" . | nindent 8 }}
+        coal.kamarad.app/server-id: "{{ .Values.kamarad.serverId }}"
+        coal.kamarad.app/game: "minecraft"
+        coal.kamarad.app/minecraft-distro: "bungee"
+        coal.kamarad.app/allocated-port: "{{ .Values.service.port }}"
+    spec:
+      {{- if eq .Values.service.type "NodePort" }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchExpressions:
+                  # Do not schedule this pod on nodes that contain
+                  # pods with the same port allocated. Just basic closure. :^)
+                  - key: coal.kamarad.app/allocated-port
+                    operator: In
+                    values:
+                      - "{{ .Values.service.port }}"
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "minecraft-bungee.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: bungee
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: bungee-pvc
+              mountPath: /bungee/plugins
+              subPath: plugins
+            - name: bungee-pvc
+              mountPath: /bungee/modules
+              subPath: modules
+            - name: bungee-config
+              mountPath: /bungee/config.yml
+              subPath: config.yml
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: bungee
+              containerPort: 25577
+          livenessProbe:
+            tcpSocket:
+              port: 25577
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: bungee-pvc
+          persistentVolumeClaim:
+            claimName: {{ include "minecraft-bungee.fullname" . }}
+        - name: bungee-config
+          configMap:
+            name: {{ include "minecraft-bungee.fullname" . }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "minecraft-spigot.fullname" . }}
+  labels:
+    {{- include "minecraft-spigot.labels" . | nindent 4 }}
+    coal.kamarad.app/server-id: "{{ .Values.kamarad.serverId }}"
+    coal.kamarad.app/game: "minecraft"
+    coal.kamarad.app/minecraft-distro: "spigot"
+    coal.kamarad.app/allocated-port: "{{ .Values.service.port }}"
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  {{- with .Values.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "minecraft-spigot.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "minecraft-spigot.selectorLabels" . | nindent 8 }}
+        coal.kamarad.app/server-id: "{{ .Values.kamarad.serverId }}"
+        coal.kamarad.app/game: "minecraft"
+        coal.kamarad.app/minecraft-distro: "spigot"
+        coal.kamarad.app/allocated-port: "{{ .Values.service.port }}"
+    spec:
+      {{- if eq .Values.service.type "NodePort" }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchExpressions:
+                  # Do not schedule this pod on nodes that contain
+                  # pods with the same port allocated. Just basic closure. :^)
+                  - key: coal.kamarad.app/allocated-port
+                    operator: In
+                    values:
+                      - "{{ .Values.service.port }}"
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "minecraft-spigot.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: mc
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: mc-pvc
+              mountPath: /minecraft/world
+              subPath: world
+            - name: mc-pvc
+              mountPath: /minecraft/world_nether
+              subPath: world_nether
+            - name: mc-pvc
+              mountPath: /minecraft/world_the_end
+              subPath: world_the_end
+            - name: mc-config
+              mountPath: /minecraft/server.properties
+              subPath: server.properties
+            - name: mc-config
+              mountPath: /minecraft/eula.txt
+              subPath: eula.txt
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: mc
+              containerPort: 25565
+          livenessProbe:
+            tcpSocket:
+              port: 25565
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: mc-pvc
+          persistentVolumeClaim:
+            claimName: {{ include "minecraft-spigot.fullname" . }}
+        - name: mc-config
+          configMap:
+            name: {{ include "minecraft-spigot.fullname" . }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
