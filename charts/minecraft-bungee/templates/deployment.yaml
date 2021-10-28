@@ -53,6 +53,26 @@ spec:
       serviceAccountName: {{ include "minecraft-bungee.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: copy-configurations
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: alpine:3
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: bungee-configmap
+              mountPath: /configmaps/config.yml
+              subPath: config.yml
+            - name: bungee-config
+              mountPath: /bungee-config
+          command:
+            - ash
+            - -c
+            - cp /configmaps/config.yml /bungee-config/config.yml
       containers:
         - name: bungee
           securityContext:
@@ -88,9 +108,11 @@ spec:
         - name: bungee-pvc
           persistentVolumeClaim:
             claimName: {{ include "minecraft-bungee.fullname" . }}
-        - name: bungee-config
+        - name: bungee-configmap
           configMap:
             name: {{ include "minecraft-bungee.fullname" . }}
+        - name: bungee-config
+          emptyDir: {}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -25,7 +25,7 @@ Install the chart:
 ```bash
 $ helm upgrade my-bungee-proxy-server \
     --install \
-    --version=0.1.0 \
+    --version=0.1.1 \
     kamarad/minecraft-bungee
 ```
 
