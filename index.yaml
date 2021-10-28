@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   minecraft-bungee:
   - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2021-10-28T20:19:04.275217936Z"
+    description: Deploy Minecraft Bungee Proxy to any Kubernetes cluster.
+    digest: 0ac27a6439a168738aa2ff058d73637353585d4599c01fb987b6789d3540acad
+    name: minecraft-bungee
+    type: application
+    urls:
+    - https://github.com/kamarad-coal/charts/releases/download/minecraft-bungee-0.1.1/minecraft-bungee-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
     appVersion: 1.16.5
     created: "2021-10-27T09:24:18.547007264Z"
     description: Deploy Minecraft Bungee Proxy to any Kubernetes cluster.
@@ -22,4 +32,4 @@ entries:
     urls:
     - https://github.com/kamarad-coal/charts/releases/download/minecraft-spigot-0.1.0/minecraft-spigot-0.1.0.tgz
     version: 0.1.0
-generated: "2021-10-27T09:24:18.747011125Z"
+generated: "2021-10-28T20:19:04.275227036Z"
